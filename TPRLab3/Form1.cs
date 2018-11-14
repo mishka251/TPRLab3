@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
-
+using System.Threading;
 namespace TPRLab3
 {
     public partial class Form1 : Form
@@ -48,41 +48,54 @@ namespace TPRLab3
         }
         public void Output()
         {
-            dgvResult.Rows.Clear();
-            dgvResult.Columns.Clear();
+            DataTable dt = new DataTable();
 
-            dgvResult.Columns.Add("k", "k");
-            dgvResult.Columns.Add("jk", "jk");
+
+            dt.Columns.Add("k");
+            dt.Columns.Add("jk");
 
             for (int i = 0; i < game.gk.m; i++)
-                dgvResult.Columns.Add("gk" + (i + 1), "gk" + (i + 1));
+                dt.Columns.Add("gk" + (i + 1));
 
-            dgvResult.Columns.Add("Mk", "Mk");
-            dgvResult.Columns.Add("Vk", "Vk");
+            dt.Columns.Add("Mk");
+            dt.Columns.Add("Vk");
 
             for (int i = 0; i < game.hk.m; i++)
-                dgvResult.Columns.Add("hk" + (i + 1), "hk" + (i + 1));
+                dt.Columns.Add("hk" + (i + 1));
 
-            dgvResult.Columns.Add("ik", "ik");
+            dt.Columns.Add("ik");
 
+
+
+            int len = dt.Columns.Count;
+            object[] arr = new object[len];
 
             for (int i = 0; i < game.Mk.Length; i++)
             {
-                dgvResult.Rows.Add();
-
-                dgvResult[0, i].Value = i + 1;
-                dgvResult[1, i].Value = game.jk[i] + 1;
-                dgvResult["Mk", i].Value = game.Mk[i];
-                dgvResult["Vk", i].Value = game.Vk[i];
-                dgvResult["ik", i].Value = game.ik[i] + 1;
+                int pos = 0;
+                arr[pos++] = i + 1;
+                arr[pos++] = game.jk[i] + 1;
 
                 for (int j = 0; j < game.gk.m; j++)
-                    dgvResult["gk" + (j + 1), i].Value = game.gk[i, j];
+                    arr[pos++] = game.gk[i, j];
+
+                arr[pos++] = game.Mk[i] + 1;
+                arr[pos++] = game.Vk[i] + 1;
 
                 for (int j = 0; j < game.hk.m; j++)
-                    dgvResult["hk" + (j + 1), i].Value = game.hk[i, j];
+                    arr[pos++] = game.hk[i, j];
+
+                arr[pos++] = game.ik[i] + 1;
+                dt.Rows.Add(arr);
+
             }
+
+            dgvResult.DataSource = dt;
+
+
         }
+
+
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -109,11 +122,10 @@ namespace TPRLab3
         private void btnSave_Click(object sender, EventArgs e)
         {
             SaveFileDialog sfd = new SaveFileDialog();
-            //sfd.Filter = ".txt|.txt";
             if (sfd.ShowDialog() != DialogResult.OK)
                 return;
             StreamWriter sw = new StreamWriter(sfd.FileName);
-            if(rbIter.Checked)
+            if (rbIter.Checked)
             {
                 sw.WriteLine("iter");
                 sw.WriteLine(nuIters.Value);
@@ -130,13 +142,12 @@ namespace TPRLab3
         private void btnLoad_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
-            //ofd.Filter = ".txt|.txt";
             if (ofd.ShowDialog() != DialogResult.OK)
                 return;
             StreamReader sr = new StreamReader(ofd.FileName);
             string s = sr.ReadLine();
 
-            if (s=="iter")
+            if (s == "iter")
             {
                 int iters = int.Parse(sr.ReadLine());
                 rbIter.Checked = true;
@@ -151,11 +162,13 @@ namespace TPRLab3
             game.Load(sr);
             sr.Close();
 
+            dgvMatrix.RowCount = game.N;
+            dgvMatrix.ColumnCount = game.M;
+
             nuM.Value = game.M;
             nuN.Value = game.N;
 
-            dgvMatrix.RowCount = game.N;
-            dgvMatrix.ColumnCount = game.M;
+
 
             for (int i = 0; i < game.N; i++)
                 for (int j = 0; j < game.M; j++)
@@ -168,7 +181,7 @@ namespace TPRLab3
             Matrix mat = new Matrix((int)nuN.Value, (int)nuM.Value);
             for (int i = 0; i < mat.n; i++)
                 for (int j = 0; j < mat.m; j++)
-                    if (dgvMatrix[j, i].Value != null)
+                    if (dgvMatrix[j, i] != null && dgvMatrix[j, i].Value != null)
                     {
                         if (double.TryParse(dgvMatrix[j, i].Value.ToString(), out double d))
                             mat[i, j] = d;
@@ -214,9 +227,9 @@ namespace TPRLab3
             //MessageBox.Show("Данная программа разработана для оптимизации работы кадрового агентства", "О программе");
         }
 
-       
 
-        
+
+
         private void panel2_Paint(object sender, PaintEventArgs e)
         {
 
@@ -235,7 +248,7 @@ namespace TPRLab3
         private void сохранитьВФайлToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             SaveFileDialog sfd = new SaveFileDialog();
-            //sfd.Filter = ".txt|.txt";
+
             if (sfd.ShowDialog() != DialogResult.OK)
                 return;
             StreamWriter sw = new StreamWriter(sfd.FileName);
@@ -256,36 +269,42 @@ namespace TPRLab3
         private void загрузитьИзФайлаToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
-            //ofd.Filter = ".txt|.txt";
+
             if (ofd.ShowDialog() != DialogResult.OK)
                 return;
             StreamReader sr = new StreamReader(ofd.FileName);
             string s = sr.ReadLine();
+            string s2 = sr.ReadLine();
+
+            var game = new Game();
+            game.Load(sr);
+            sr.Close();
+
+            dgvMatrix.RowCount = game.N;
+            dgvMatrix.ColumnCount = game.M;
+
+            nuM.Value = game.M;
+            nuN.Value = game.N;
+
+
+
+            for (int i = 0; i < game.N; i++)
+                for (int j = 0; j < game.M; j++)
+                    dgvMatrix[j, i].Value = game.PayMatrix[i, j];
 
             if (s == "iter")
             {
-                int iters = int.Parse(sr.ReadLine());
+                int iters = int.Parse(s2);
                 rbIter.Checked = true;
                 nuIters.Value = iters;
             }
             else
             {
-                double eps = double.Parse(sr.ReadLine());
+                double eps = double.Parse(s2);
                 rbEps.Checked = true;
                 tbEps.Text = eps.ToString();
             }
-            game.Load(sr);
-            sr.Close();
-
-            nuM.Value = game.M;
-            nuN.Value = game.N;
-
-            dgvMatrix.RowCount = game.N;
-            dgvMatrix.ColumnCount = game.M;
-
-            for (int i = 0; i < game.N; i++)
-                for (int j = 0; j < game.M; j++)
-                    dgvMatrix[j, i].Value = game.PayMatrix[i, j];
+            Input();
         }
 
         private void nuIters_ValueChanged(object sender, EventArgs e)
