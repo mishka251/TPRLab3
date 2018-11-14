@@ -3,16 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace TPRLab3
 {
     class Game
     {
-        Matrix PayMatrix;
+        public Matrix PayMatrix;
         //  int iterCount;
         public int[] ik, jk;
         public Matrix gk, hk;
         public double[] Mk, Vk;
+        public int M { get => PayMatrix.m; }
+        public int N { get => PayMatrix.n; }
         // double eps;
         public Game()
         {
@@ -44,13 +48,13 @@ namespace TPRLab3
         }
         (double maximin, int pos) MaxiMin(Matrix paymat)
         {
-            double[] mins = new double[paymat.m];
-            for (int j = 0; j < paymat.m; j++)
+            double[] mins = new double[paymat.n];
+            for (int i = 0; i < paymat.n; i++)
             {
-                mins[j] = paymat[0, j];
-                for (int i = 1; i < paymat.n; i++)
-                    if (paymat[i, j] < mins[j])
-                        mins[j] = paymat[i, j];
+                mins[i] = paymat[i, 0];
+                for (int j = 1; j < paymat.m; j++)
+                    if (paymat[i, j] < mins[i])
+                        mins[i] = paymat[i, j];
             }
             double res = mins.Max();
             return (res, Array.IndexOf(mins, res));
@@ -61,8 +65,8 @@ namespace TPRLab3
 
             ik = new int[iterCount];
             jk = new int[iterCount];
-            gk = new Matrix(iterCount, PayMatrix.m);
-            hk = new Matrix(iterCount, PayMatrix.n);
+            gk = new Matrix(iterCount, PayMatrix.n);
+            hk = new Matrix(iterCount, PayMatrix.m);
 
             Mk = new double[iterCount];
             Vk = new double[iterCount];
@@ -76,10 +80,10 @@ namespace TPRLab3
             ik[0] = i;
             jk[0] = j;
 
-            for (int k = 0; k < PayMatrix.m; k++)
+            for (int k = 0; k < PayMatrix.n; k++)
                 gk[0, k] = PayMatrix[k, i];
 
-            for (int k = 0; k < PayMatrix.n; k++)
+            for (int k = 0; k < PayMatrix.m; k++)
                 hk[0, k] = PayMatrix[j, k];
 
             M = gk[0, 0];
@@ -91,7 +95,7 @@ namespace TPRLab3
                 }
 
             V = hk[0, 0];
-            for (int k = 1; k < gk.m; k++)
+            for (int k = 1; k < hk.m; k++)
                 if (hk[0, k] > V)
                 {
                     V = hk[0, k];
@@ -100,12 +104,16 @@ namespace TPRLab3
 
             Mk[0] = M;
             Vk[0] = V;
-            ik[1] = i;
-            jk[1] = j;
+            if (iterCount > 1)
+            {
+                ik[1] = i;
+                jk[1] = j;
+            }
+
             for (int iter = 1; iter < iterCount; iter++)
             {
 
-                for (int k = 0; k < PayMatrix.m; k++)
+                for (int k = 0; k < PayMatrix.n; k++)
                     gk[iter, k] = gk[iter - 1, k] + PayMatrix[k, j];
 
 
@@ -125,7 +133,7 @@ namespace TPRLab3
 
                 V = hk[iter, 0];
                 j = 0;
-                for (int k = 1; k < gk.m; k++)
+                for (int k = 1; k < hk.m; k++)
                     if (hk[iter, k] > V)
                     {
                         V = hk[iter, k];
@@ -167,11 +175,11 @@ namespace TPRLab3
             ik.Add(i);
             jk.Add(j);
             gk.Add(new List<double>());
-            for (int k = 0; k < PayMatrix.m; k++)
+            for (int k = 0; k < PayMatrix.n; k++)
                 gk[0].Add(PayMatrix[k, i]);
 
             hk.Add(new List<double>());
-            for (int k = 0; k < PayMatrix.n; k++)
+            for (int k = 0; k < PayMatrix.m; k++)
                 hk[0].Add(PayMatrix[j, k]);
 
             M = gk[0].Min();
@@ -189,20 +197,20 @@ namespace TPRLab3
             {
 
                 gk.Add(new List<double>());
-                for (int k = 0; k < PayMatrix.m; k++)
+                for (int k = 0; k < gk[iter-1].Count; k++)
                     gk[iter].Add(gk[iter - 1][k] + PayMatrix[k, j]);
 
 
-               hk.Add(new List<double>());
+                hk.Add(new List<double>());
                 for (int k = 0; k < hk[iter - 1].Count; k++)
                     hk[iter].Add(hk[iter - 1][k] + PayMatrix[i, k]);
 
 
-                M = gk[0].Min();
-                i = gk[0].IndexOf(M);
+                M = gk[iter].Min();
+                i = gk[iter].IndexOf(M);
 
-                V = hk[0].Max();
-                j = hk[0].IndexOf(V);
+                V = hk[iter].Max();
+                j = hk[iter].IndexOf(V);
 
                 M /= (iter + 1);
                 V /= (iter + 1);
@@ -225,5 +233,20 @@ namespace TPRLab3
 
 
         }
+
+        public void Save(TextWriter tw)
+        {
+            PayMatrix.Save(tw);
+        }
+        public void Load(TextReader tr)
+        {
+            PayMatrix.Load(tr);
+        }
+
+        public bool Check()
+        {
+            return MaxiMin(PayMatrix).maximin == MiniMax(PayMatrix).minimax;
+        }
+
     }
 }

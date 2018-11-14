@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 
 namespace TPRLab3
 {
@@ -17,18 +18,13 @@ namespace TPRLab3
             InitializeComponent();
         }
         Game game;
+
+
+
         private void btnStart_Click(object sender, EventArgs e)
         {
             try
             {
-
-                Matrix mat = new Matrix((int)nuN.Value, (int)nuM.Value);
-                for (int i = 0; i < mat.n; i++)
-                    for (int j = 0; j < mat.m; j++)
-                        mat[i, j] = double.Parse(dgvMatrix[j, i].Value.ToString());
-
-                game.input(mat);
-
                 if (rbIter.Checked)
                 {
                     int iter = (int)nuIters.Value;
@@ -94,16 +90,207 @@ namespace TPRLab3
             dgvMatrix.ColumnCount = dgvMatrix.RowCount = 1;
             dgvMatrix.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
             dgvResult.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            dgvMatrix.AllowUserToAddRows = false;
         }
 
         private void nuM_ValueChanged(object sender, EventArgs e)
         {
-            dgvMatrix.RowCount = (int)nuM.Value;
+            dgvMatrix.RowCount = (int)nuN.Value;
+
+            Input();
         }
 
         private void nuN_ValueChanged(object sender, EventArgs e)
         {
-            dgvMatrix.ColumnCount = (int)nuN.Value;
+            dgvMatrix.ColumnCount = (int)nuM.Value;
+            Input();
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            //sfd.Filter = ".txt|.txt";
+            if (sfd.ShowDialog() != DialogResult.OK)
+                return;
+            StreamWriter sw = new StreamWriter(sfd.FileName);
+            if(rbIter.Checked)
+            {
+                sw.WriteLine("iter");
+                sw.WriteLine(nuIters.Value);
+            }
+            else
+            {
+                sw.WriteLine("eps");
+                sw.WriteLine(tbEps.Text);
+            }
+            game.Save(sw);
+            sw.Close();
+        }
+
+        private void btnLoad_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            //ofd.Filter = ".txt|.txt";
+            if (ofd.ShowDialog() != DialogResult.OK)
+                return;
+            StreamReader sr = new StreamReader(ofd.FileName);
+            string s = sr.ReadLine();
+
+            if (s=="iter")
+            {
+                int iters = int.Parse(sr.ReadLine());
+                rbIter.Checked = true;
+                nuIters.Value = iters;
+            }
+            else
+            {
+                double eps = double.Parse(sr.ReadLine());
+                rbEps.Checked = true;
+                tbEps.Text = eps.ToString();
+            }
+            game.Load(sr);
+            sr.Close();
+
+            nuM.Value = game.M;
+            nuN.Value = game.N;
+
+            dgvMatrix.RowCount = game.N;
+            dgvMatrix.ColumnCount = game.M;
+
+            for (int i = 0; i < game.N; i++)
+                for (int j = 0; j < game.M; j++)
+                    dgvMatrix[j, i].Value = game.PayMatrix[i, j];
+
+        }
+
+        void Input()
+        {
+            Matrix mat = new Matrix((int)nuN.Value, (int)nuM.Value);
+            for (int i = 0; i < mat.n; i++)
+                for (int j = 0; j < mat.m; j++)
+                    if (dgvMatrix[j, i].Value != null)
+                    {
+                        if (double.TryParse(dgvMatrix[j, i].Value.ToString(), out double d))
+                            mat[i, j] = d;
+                    }
+
+            game.input(mat);
+        }
+
+
+        private void dgvMatrix_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            try
+            {
+                Input();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (game.Check())
+                MessageBox.Show("Есть седловая точка");
+            else
+                MessageBox.Show("Нет седловой точки");
+        }
+
+        private void dgvMatrix_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
+
+        private void label7_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void оПрограммеToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            (new Form2()).ShowDialog();
+            //MessageBox.Show("Данная программа разработана для оптимизации работы кадрового агентства", "О программе");
+        }
+
+       
+
+        
+        private void panel2_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void menuStrip1_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+
+        }
+
+        private void оПрограммеToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            (new Form2()).ShowDialog();
+        }
+
+        private void сохранитьВФайлToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            //sfd.Filter = ".txt|.txt";
+            if (sfd.ShowDialog() != DialogResult.OK)
+                return;
+            StreamWriter sw = new StreamWriter(sfd.FileName);
+            if (rbIter.Checked)
+            {
+                sw.WriteLine("iter");
+                sw.WriteLine(nuIters.Value);
+            }
+            else
+            {
+                sw.WriteLine("eps");
+                sw.WriteLine(tbEps.Text);
+            }
+            game.Save(sw);
+            sw.Close();
+        }
+
+        private void загрузитьИзФайлаToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            //ofd.Filter = ".txt|.txt";
+            if (ofd.ShowDialog() != DialogResult.OK)
+                return;
+            StreamReader sr = new StreamReader(ofd.FileName);
+            string s = sr.ReadLine();
+
+            if (s == "iter")
+            {
+                int iters = int.Parse(sr.ReadLine());
+                rbIter.Checked = true;
+                nuIters.Value = iters;
+            }
+            else
+            {
+                double eps = double.Parse(sr.ReadLine());
+                rbEps.Checked = true;
+                tbEps.Text = eps.ToString();
+            }
+            game.Load(sr);
+            sr.Close();
+
+            nuM.Value = game.M;
+            nuN.Value = game.N;
+
+            dgvMatrix.RowCount = game.N;
+            dgvMatrix.ColumnCount = game.M;
+
+            for (int i = 0; i < game.N; i++)
+                for (int j = 0; j < game.M; j++)
+                    dgvMatrix[j, i].Value = game.PayMatrix[i, j];
+        }
+
+        private void nuIters_ValueChanged(object sender, EventArgs e)
+        {
+            Input();
         }
     }
 }
